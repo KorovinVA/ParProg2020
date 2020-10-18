@@ -5,7 +5,25 @@
 
 double calc(uint32_t x_last, uint32_t num_threads)
 {
-  return 0;
+  double* sum = (double*)calloc(num_threads, sizeof(double));
+  double* err = (double*)calloc(num_threads, sizeof(double));
+
+  #pragma omp parallel for num_threads(num_threads)
+  for(uint32_t i = 1; i <= x_last; i++)
+  {
+  	double t = sum[omp_get_thread_num()] + 1 / (double) i;
+    err[omp_get_thread_num()] += sum[omp_get_thread_num()] - t + 1 / (double) i;
+    sum[omp_get_thread_num()] = t;
+  }
+
+  double res = 0;
+  for(uint32_t i = 0; i < num_threads; ++i)
+  {
+    res += err[i] + sum[i];
+  }
+  free(err);
+  free(sum);
+  return res;
 }
 
 int main(int argc, char** argv)
