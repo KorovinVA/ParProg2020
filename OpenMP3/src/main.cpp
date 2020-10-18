@@ -3,6 +3,7 @@
 #include <fstream>
 #include <omp.h>
 #include <cmath>
+#include <vector>
 
 double func(double x)
 {
@@ -11,7 +12,28 @@ double func(double x)
 
 double calc(double x0, double x1, double dx, uint32_t num_threads)
 {
-  return 0;
+  std::vector<double> sum(num_threads);
+  std::vector<double> err(num_threads);
+  uint32_t steps = uint32_t((x1 - x0) / dx);
+
+  #pragma omp parallel for num_threads(num_threads)
+  for(uint32_t i = 0 ; i < steps; ++i)
+  {
+    double x     = x0 + i * dx;
+    double input = (func(x) + func(x + dx)) / 2 * dx;
+    double t     = sum[omp_get_thread_num()] + input;
+
+    err[omp_get_thread_num()] += sum[omp_get_thread_num()] - t + input;
+    sum[omp_get_thread_num()] = t;
+  }
+
+  double res = 0;
+  for(uint32_t i = 0; i < num_threads; i++)
+  {
+    res += sum[i] + err[i];
+  }
+  res += (func(steps * dx + x0) + func(x1)) / 2 * dx;
+  return res;
 }
 
 int main(int argc, char** argv)
