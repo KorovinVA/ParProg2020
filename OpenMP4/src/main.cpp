@@ -2,10 +2,47 @@
 #include <iomanip>
 #include <fstream>
 #include <omp.h>
+#include <vector>
+
+double fact(uint32_t num)
+{
+  double res = 1;
+  #pragma omp parallel for reduction(*:res)
+  for(uint32_t i = 1; i <= num; ++i)
+  {
+    res *= (double)i;
+  }
+  return res;
+}
 
 double calc(uint32_t x_last, uint32_t num_threads)
 {
-  return 0;
+  std::vector<double> sum(num_threads);
+  std::vector<double> err(num_threads);
+  const uint32_t maxFact = 170;
+  omp_set_nested(1);
+
+  #pragma omp parallel for num_threads(num_threads)
+  for(uint32_t i = 0 ; i < x_last; ++i)
+  {
+    //No reason to add numbers < 1/maxFact!.
+    //Their values are less than double precision
+    if(i <= maxFact)
+    {
+      double input = 1 / fact(i);
+      double t     = sum[omp_get_thread_num()] + input;
+
+      err[omp_get_thread_num()] += sum[omp_get_thread_num()] - t + input;
+      sum[omp_get_thread_num()] = t;
+    }
+  }
+
+  double res = 0;
+  for(uint32_t i = 0; i < num_threads; i++)
+  {
+    res += sum[i] + err[i];
+  }
+  return res;
 }
 
 int main(int argc, char** argv)
