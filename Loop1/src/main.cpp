@@ -1,13 +1,18 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+
+#define OMPI_SKIP_MPICXX 1
 #include <mpi.h>
 #include <unistd.h>
 #include <cmath>
 
 void calc(double* arr, uint32_t ySize, uint32_t xSize, int rank, int size)
 {
-  if (rank == 0 && size > 0)
+  MPI_Bcast(&xSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&ySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+  if (rank == 0 && size == 1)
   {
     for (uint32_t y = 0; y < ySize; y++)
     {
@@ -16,6 +21,26 @@ void calc(double* arr, uint32_t ySize, uint32_t xSize, int rank, int size)
         arr[y*xSize + x] = sin(0.00001*arr[y*xSize + x]);
       }
     }
+  }
+  else
+  {
+    uint32_t bufSize = ySize * xSize / size;
+
+    double* buf = new double [bufSize];
+    MPI_Scatter(arr, bufSize, MPI_DOUBLE, buf, bufSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    for(uint32_t i = 0; i < bufSize; ++i)
+    {
+      buf[i] = sin(0.00001*buf[i]);
+    }
+    if(rank == 0)
+    {
+      for(uint32_t i = 1; i <= (ySize * xSize) % size; ++i)
+      {
+        arr[ySize * xSize - i] = sin(0.00001*arr[ySize * xSize - i]);
+      }
+    }
+    MPI_Gather(buf, bufSize, MPI_DOUBLE, arr, bufSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    delete [] buf;
   }
 }
 
