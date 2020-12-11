@@ -31,7 +31,7 @@ for test_dir in $tests_dir/*; do
     printf "\n[TEST $test]\n"
     echo "mpiexec -np $proc $exe $test_dir/input.txt $build/$test.txt"
     START=$(date +%s%N)
-    mpiexec -np $proc $exe $test_dir/input.txt $build/$test.txt
+    mpiexec --oversubscribe -np $proc $exe $test_dir/input.txt $build/$test.txt
     END=$(date +%s%N)
     DIFF=$((($END - $START)/1000000))
     if [ ! $? -eq 0 ]; then
