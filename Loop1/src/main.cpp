@@ -12,36 +12,23 @@ void calc(double* arr, uint32_t ySize, uint32_t xSize, int rank, int size)
   MPI_Bcast(&xSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Bcast(&ySize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  if (rank == 0 && size == 1)
-  {
-    for (uint32_t y = 0; y < ySize; y++)
-    {
-      for (uint32_t x = 0; x < xSize; x++)
-      {
-        arr[y*xSize + x] = sin(0.00001*arr[y*xSize + x]);
-      }
-    }
-  }
-  else
-  {
-    uint32_t bufSize = ySize * xSize / size;
+  uint32_t bufSize = ySize * xSize / size;
 
-    double* buf = new double [bufSize];
-    MPI_Scatter(arr, bufSize, MPI_DOUBLE, buf, bufSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    for(uint32_t i = 0; i < bufSize; ++i)
-    {
-      buf[i] = sin(0.00001*buf[i]);
-    }
-    if(rank == 0)
-    {
-      for(uint32_t i = 1; i <= (ySize * xSize) % size; ++i)
-      {
-        arr[ySize * xSize - i] = sin(0.00001*arr[ySize * xSize - i]);
-      }
-    }
-    MPI_Gather(buf, bufSize, MPI_DOUBLE, arr, bufSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    delete [] buf;
+  double* buf = new double [bufSize];
+  MPI_Scatter(arr, bufSize, MPI_DOUBLE, buf, bufSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  for(uint32_t i = 0; i < bufSize; ++i)
+  {
+    buf[i] = sin(0.00001*buf[i]);
   }
+  if(rank == 0)
+  {
+    for(uint32_t i = 1; i <= (ySize * xSize) % size; ++i)
+    {
+      arr[ySize * xSize - i] = sin(0.00001*arr[ySize * xSize - i]);
+    }
+  }
+  MPI_Gather(buf, bufSize, MPI_DOUBLE, arr, bufSize, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  delete [] buf;
 }
 
 int main(int argc, char** argv)
